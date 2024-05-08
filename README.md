@@ -4,6 +4,10 @@
 - Projects may be moved to dedicated repos if getting bigger and needing better documentation
 - Unless otherwise specified, all content are licensed under the following MIT license.
 
+## Library
+
+Library code is under `lib/`. Note that they are not organized into packages and you need to set `PYTHONPATH` to include that path in order for design files under `designs` to work.
+
 ## License
 
 > Copyright 2024 Chaserhkj
