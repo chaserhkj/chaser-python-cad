@@ -1,5 +1,6 @@
 # Personal Python CAD Creations
 
+- Use with [build123d](https://github.com/gumyr/build123d) and preferably [vscode-ocp-cad-viewer](https://github.com/bernhard-42/vscode-ocp-cad-viewer)
 - Projects may be moved to dedicated repos if getting bigger and needing better documentation
 - Unless otherwise specified, all content are licensed under the following MIT license.
 
