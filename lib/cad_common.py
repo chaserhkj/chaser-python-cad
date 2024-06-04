@@ -37,6 +37,15 @@ screw = Box({
         "tap_hole_d": 4.2,
         "countersink_d": 11.47
     },
+    "m6": {
+        "clearance_hole_d": {
+            "close": 6.4,
+            "medium": 6.6,
+            "free": 7
+        },
+        "tap_hole_d": 5,
+        "countersink_d": 13.71
+    },
     "countersink_angle": 90
 })
 nut = Box({
