@@ -103,6 +103,7 @@ class NutTrapType(Enum):
     SIDE = 1
     INLINE = 2
 
+
 @dataclass(kw_only=True)
 class CommonPart(BasePartObject):
     rotation: RotationLike = (0, 0, 0)
@@ -126,19 +127,24 @@ class CommonPart(BasePartObject):
         new = self.__class__(**param)
         return new
 
+
 class CommonPartCLIInterface(object):
     def __init__(self,
-            obj_class:Type["CommonPart"],
-            extra_arg_config: dict = {},
-            parser: ArgumentParser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-        ):
+                 obj_class: Type["CommonPart"],
+                 extra_arg_config: dict = {},
+                 parser: ArgumentParser = ArgumentParser(
+                     formatter_class=ArgumentDefaultsHelpFormatter)
+                 ):
         self._obj = None
         self._obj_class = obj_class
         self._parser = parser
-        
-        get_aliases = lambda name: extra_arg_config.get(name, {}).get("aliases", [])
-        get_extra = lambda name: {k:extra_arg_config[k] for k in extra_arg_config.get(name, {}) if k!="aliases"}
-        
+
+        def get_aliases(name): return extra_arg_config.get(
+            name, {}).get("aliases", [])
+
+        def get_extra(name): return {
+            k: extra_arg_config[k] for k in extra_arg_config.get(name, {}) if k != "aliases"}
+
         for f in fields(self._obj_class):
             aliases = get_aliases(f.name)
             extra = copy(get_extra(f.name))
@@ -150,31 +156,34 @@ class CommonPartCLIInterface(object):
                 if not "help" in extra:
                     extra["help"] = f.name
                 self._parser.add_argument(f"--{f.name}", *aliases, **extra)
-        
-        self._parser.add_argument("--port", type=int, help="Port to use for rendering", default=3939)
-        self._parser.add_argument("-o", "--output", help="Output file to write to, if omitted, will just render instead")
-    
+
+        self._parser.add_argument(
+            "--port", type=int, help="Port to use for rendering", default=3939)
+        self._parser.add_argument(
+            "-o", "--output", help="Output file to write to, if omitted, will just render instead")
+
     def parse_args(self):
         self._args = self._parser.parse_args()
         return self._args
-    
+
     def make(self):
         if self._obj is None:
-            init_args = {f.name: getattr(self._args, (f.name)) for f in fields(self._obj_class) if f.name in self._args}
+            init_args = {f.name: getattr(self._args, (f.name)) for f in fields(
+                self._obj_class) if f.name in self._args}
             self._obj = self._obj_class(**init_args)
         return self._obj
 
     def render(self):
         set_port(self._args.port)
         show(self.make())
-        
+
     def save_output(self):
         ext = os.path.splitext(self._args.output)[1][1:]
         if not hasattr(exporters3d, f"export_{ext}"):
             raise ValueError("Unknown output file type")
         export_func = getattr(exporters3d, f"export_{ext}")
         export_func(self.make(), self._args.output)
-    
+
     def main(self):
         self.parse_args()
         if self._args.output is None:
