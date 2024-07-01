@@ -39,7 +39,11 @@ screw = Box({
             "free": 5.8
         },
         "tap_hole_d": 4.2,
-        "countersink_d": 11.47
+        "countersink_d": 11.47,
+        "counter_bore": {
+            "d": 9.75,
+            "l": 5.0
+        }
     },
     "m6": {
         "clearance_hole_d": {
