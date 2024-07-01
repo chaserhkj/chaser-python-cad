@@ -149,13 +149,13 @@ class CommonPartCLIInterface(object):
             aliases = get_aliases(f.name)
             extra = copy(get_extra(f.name))
             if isinstance(f.default, _MISSING_TYPE):
-                self._parser.add_argument(f.name, *aliases, **extra)
+                self._parser.add_argument(f.name, type=f.type, *aliases, **extra)
             else:
                 if not "default" in extra:
                     extra["default"] = f.default
                 if not "help" in extra:
                     extra["help"] = f.name
-                self._parser.add_argument(f"--{f.name}", *aliases, **extra)
+                self._parser.add_argument(f"--{f.name}", type=f.type, *aliases, **extra)
 
         self._parser.add_argument(
             "--port", type=int, help="Port to use for rendering", default=3939)
