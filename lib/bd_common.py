@@ -98,6 +98,10 @@ def anchor_to(shape, target_loc, anchor_vec, keep_lcs: bool = True):
 def connect_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
     return anchor_to(shape, bound_loc(target, to_vec), from_vec, keep_lcs)
 
+def connect_relatively_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
+    return target.location*anchor_to(shape, bound_loc(target.located(Pos()), to_vec), from_vec, keep_lcs)
+
+
 
 class NutTrapType(Enum):
     SIDE = 1
