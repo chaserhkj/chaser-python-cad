@@ -101,40 +101,9 @@ def connect_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
 def connect_relatively_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
     return target.location*anchor_to(shape, bound_loc(target.located(Pos()), to_vec), from_vec, keep_lcs)
 
-
-
-class NutTrapType(Enum):
-    SIDE = 1
-    INLINE = 2
-
-
-@dataclass(kw_only=True)
-class CommonPart(BasePartObject):
-    rotation: RotationLike = (0, 0, 0)
-    align: Union[Align, tuple[Align, Align, Align]] = None
-    mode: Mode = Mode.SUBTRACT
-    main_part: Optional[Part] = None
-
-    def make(self):
-        raise NotImplementedError
-
-    def __post_init__(self):
-        if not self.main_part:
-            self.main_part = self.make()
-        super().__init__(self.main_part, rotation=self.rotation,
-                         align=self.align, mode=self.mode)
-
-    def wrap(self, wrapped: Part):
-        param = dict((f.name, getattr(self, f.name))
-                     for f in fields(self.__class__))
-        param["main_part"] = wrapped
-        new = self.__class__(**param)
-        return new
-
-
-class CommonPartCLIInterface(object):
+class CommonCLIInterface(object):
     def __init__(self,
-                 obj_class: Type["CommonPart"],
+                 obj_class: Type,
                  extra_arg_config: dict = {},
                  parser: ArgumentParser = ArgumentParser(
                      formatter_class=ArgumentDefaultsHelpFormatter)
@@ -163,6 +132,9 @@ class CommonPartCLIInterface(object):
 
         self._parser.add_argument(
             "--port", type=int, help="Port to use for rendering", default=3939)
+        self.add_output_argument()
+    
+    def add_output_argument(self):
         self._parser.add_argument(
             "-o", "--output", help="Output file to write to, if omitted, will just render instead")
 
@@ -182,11 +154,7 @@ class CommonPartCLIInterface(object):
         show(self.make())
 
     def save_output(self):
-        ext = os.path.splitext(self._args.output)[1][1:]
-        if not hasattr(exporters3d, f"export_{ext}"):
-            raise ValueError("Unknown output file type")
-        export_func = getattr(exporters3d, f"export_{ext}")
-        export_func(self.make(), self._args.output)
+        raise NotImplemented
 
     def main(self):
         self.parse_args()
@@ -195,6 +163,36 @@ class CommonPartCLIInterface(object):
         else:
             self.save_output()
 
+@dataclass(kw_only=True)
+class CommonPart(BasePartObject):
+    rotation: RotationLike = (0, 0, 0)
+    align: Union[Align, tuple[Align, Align, Align]] = None
+    mode: Mode = Mode.SUBTRACT
+    main_part: Optional[Part] = None
+
+    def make(self):
+        raise NotImplementedError
+
+    def __post_init__(self):
+        if not self.main_part:
+            self.main_part = self.make()
+        super().__init__(self.main_part, rotation=self.rotation,
+                         align=self.align, mode=self.mode)
+
+    def wrap(self, wrapped: Part):
+        param = dict((f.name, getattr(self, f.name))
+                     for f in fields(self.__class__))
+        param["main_part"] = wrapped
+        new = self.__class__(**param)
+        return new
+
+class CommonPartCLIInterface(CommonCLIInterface):
+    def save_output(self):
+        ext = os.path.splitext(self._args.output)[1][1:]
+        if not hasattr(exporters3d, f"export_{ext}"):
+            raise ValueError("Unknown output file type")
+        export_func = getattr(exporters3d, f"export_{ext}")
+        export_func(self.make(), self._args.output)
 
 @dataclass(kw_only=True)
 class CommonSketch(BaseSketchObject):
@@ -218,6 +216,49 @@ class CommonSketch(BaseSketchObject):
         new = self.__class__(**param)
         return new
 
+@dataclass(kw_only=True)
+class CommonAssembly(Compound):
+    # List of (children, <individual_save_name> or
+    #           <None for not saving individually>)
+    children: List[Tuple[Shape, Optional[str]]] = []
+    compound_args : Dict[str, Any] = {}
+
+    def make(self):
+        raise NotImplementedError
+
+    def __post_init__(self):
+        if not self.children:
+            self.children = self.make()
+        stripped_children = [t[0] for t in self.children]        
+        super().__init__(stripped_children, **self.compound_args)
+
+class CommonAssemblyCLIInterface(CommonCLIInterface):
+    def add_output_argument(self):
+        self._parser.add_argument(
+            "-o", "--output_prefix",
+            help="Prefix of file names of output, if omitted, will just render instead")
+        self._parser.add_argument(
+            "-t", "--output_types",
+            choices=["stl", "step", "combined_step"],
+            default="stl",
+            help="Type of output files to write")
+    def save_output(self):
+        out_type = self._args.output_types
+        if out_type == "combined_step":
+            exporters3d.export_step(self.make(), f"{self._args.output_prefix}.step")
+        else:
+            if not hasattr(exporters3d, f"export_{out_type}"):
+                raise ValueError("Unknown output file type")
+            export_func = getattr(exporters3d, f"export_{out_type}")
+            for (obj, name) in self.make().children:
+                if name is None:
+                    continue
+                export_func(self.make(),
+                    f"{self._args.output_prefix}_{name}.{out_type}")
+
+class NutTrapType(Enum):
+    SIDE = 1
+    INLINE = 2
 
 @dataclass
 class NutTrap(CommonPart):
@@ -249,7 +290,6 @@ class NutTrap(CommonPart):
             trap += mask
         trap = Location([0, 0, -self.h / 2]) * trap
         return trap
-
 
 @dataclass
 class FloatingHoleBridgeMask(CommonPart):
