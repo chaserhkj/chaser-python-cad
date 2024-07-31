@@ -2,9 +2,10 @@ import cad_common
 from build123d import *
 from build123d import Shape
 from build123d import exporters3d
-from dataclasses import dataclass, fields, _MISSING_TYPE
+from dataclasses import dataclass, fields, _MISSING_TYPE, field
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-from typing import Union, List, Optional, Type
+from typing import (
+    Union, List, Optional, Type, Callable, Tuple, Dict, Any)
 from ocp_vscode import set_port, show
 from enum import Enum
 from copy import copy
@@ -220,17 +221,21 @@ class CommonSketch(BaseSketchObject):
 class CommonAssembly(Compound):
     # List of (children, <individual_save_name> or
     #           <None for not saving individually>)
-    children: List[Tuple[Shape, Optional[str]]] = []
-    compound_args : Dict[str, Any] = {}
+    children_specs: List[Tuple[Shape, Optional[str]]] = field(default_factory=list)
+    compound_args: Dict[str, Any] = field(default_factory=dict)
+    # Custom save function to be called when saving
+    # custom_save_func(compound_to_save, save_path_prefix)
+    custom_save_func: Optional[Callable[[Compound, str], None]] = None
 
     def make(self):
         raise NotImplementedError
-
+    
     def __post_init__(self):
-        if not self.children:
-            self.children = self.make()
-        stripped_children = [t[0] for t in self.children]        
+        if not self.children_specs:
+            self.children_specs = self.make()
+        stripped_children = [t[0] for t in self.children_specs]
         super().__init__(stripped_children, **self.compound_args)
+
 
 class CommonAssemblyCLIInterface(CommonCLIInterface):
     def add_output_argument(self):
@@ -242,15 +247,23 @@ class CommonAssemblyCLIInterface(CommonCLIInterface):
             choices=["stl", "step", "combined_step"],
             default="stl",
             help="Type of output files to write")
+        self._parser.add_argument(
+            "-C", "--no_custom_saves",
+            default=False, action="store_true",
+            help="Disable custom saves as defined by children assemblies")
     def save_output(self):
         out_type = self._args.output_types
+        if not self._args.no_custom_saves:
+            for (obj, name) in self.make().children_specs:
+                if hasattr(obj, "custom_save_func") and not (obj.custom_save_func is None):
+                    obj.custom_save_func(obj, f"{self._args.output_prefix}_{name}")
         if out_type == "combined_step":
             exporters3d.export_step(self.make(), f"{self._args.output_prefix}.step")
         else:
             if not hasattr(exporters3d, f"export_{out_type}"):
                 raise ValueError("Unknown output file type")
             export_func = getattr(exporters3d, f"export_{out_type}")
-            for (obj, name) in self.make().children:
+            for (obj, name) in self.make().children_specs:
                 if name is None:
                     continue
                 export_func(self.make(),
@@ -392,15 +405,10 @@ def save_stl(part: Part, fn):
     part.export_stl(fn)
 
 
-FILETYPE_2D = {"dxf", "svg"}
-
-
-def export_assembly(assembly: Compound, prefix: str, filetype: str):
-    save_func = globals().get(f"save_{filetype}")
-    children = map(section_board, assembly.children) \
-        if filetype in FILETYPE_2D else assembly.children
+def export_assembled_projected_svg(assembly: Compound, prefix: str):
+    children = map(section_board, assembly.children)
     for child in children:
-        save_func(child, f"{prefix}{child.label}.{filetype}")
+        save_svg(child, f"{prefix}{child.label}.svg")
 
 
 def label_objects(object_names: List[str], source):
