@@ -122,11 +122,17 @@ class CommonCLI(object):
         for f in fields(self._obj_class):
             aliases = get_aliases(f.name)
             extra = copy(get_extra(f.name))
-            if isinstance(f.default, _MISSING_TYPE):
+            if isinstance(f.default, _MISSING_TYPE) and \
+                isinstance(f.default_factory, _MISSING_TYPE):
                 self._parser.add_argument(f.name, type=f.type, *aliases, **extra)
             else:
                 if not "default" in extra:
-                    extra["default"] = f.default
+                    if not isinstance(f.default, _MISSING_TYPE):
+                        extra["default"] = f.default
+                    elif not isinstance(f.default_factory, _MISSING_TYPE):
+                        extra["default"] = f.default_factory()
+                    else:
+                        raise Exception("No default and no default_factory")
                 if not "help" in extra:
                     extra["help"] = f.name
                 self._parser.add_argument(f"--{f.name}", type=f.type, *aliases, **extra)
@@ -157,12 +163,16 @@ class CommonCLI(object):
     def save_output(self):
         raise NotImplemented
 
+    @property
+    def output_is_set(self):
+        return not self._args.output is None
+
     def main(self):
         self.parse_args()
-        if self._args.output is None:
-            self.render()
-        else:
+        if self.output_is_set:
             self.save_output()
+        else:
+            self.render()
 
 @dataclass(kw_only=True)
 class CommonPart(BasePartObject):
@@ -251,6 +261,9 @@ class CommonAssemblyCLI(CommonCLI):
             "-C", "--no_custom_saves",
             default=False, action="store_true",
             help="Disable custom saves as defined by children assemblies")
+    @property
+    def output_is_set(self):
+        return not self._args.output_prefix is None
     def save_output(self):
         out_type = self._args.output_types
         if not self._args.no_custom_saves:
