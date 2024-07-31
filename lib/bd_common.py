@@ -102,7 +102,7 @@ def connect_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
 def connect_relatively_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
     return target.location*anchor_to(shape, bound_loc(target.located(Pos()), to_vec), from_vec, keep_lcs)
 
-class CommonCLIInterface(object):
+class CommonCLI(object):
     def __init__(self,
                  obj_class: Type,
                  extra_arg_config: dict = {},
@@ -187,7 +187,7 @@ class CommonPart(BasePartObject):
         new = self.__class__(**param)
         return new
 
-class CommonPartCLIInterface(CommonCLIInterface):
+class CommonPartCLI(CommonCLI):
     def save_output(self):
         ext = os.path.splitext(self._args.output)[1][1:]
         if not hasattr(exporters3d, f"export_{ext}"):
@@ -237,7 +237,7 @@ class CommonAssembly(Compound):
         super().__init__(stripped_children, **self.compound_args)
 
 
-class CommonAssemblyCLIInterface(CommonCLIInterface):
+class CommonAssemblyCLI(CommonCLI):
     def add_output_argument(self):
         self._parser.add_argument(
             "-o", "--output_prefix",
