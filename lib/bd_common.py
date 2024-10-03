@@ -6,15 +6,11 @@ from dataclasses import dataclass, fields, _MISSING_TYPE, field
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from typing import (
     Union, List, Optional, Type, Callable, Tuple, Dict, Any)
-from ocp_vscode import set_port, show
 from enum import Enum
 from copy import copy
 import os
 import math
 import colorsys
-
-# from ocp_vscode import show, set_port
-# set_port(3939)
 
 _layer_height = 0.2
 
@@ -107,11 +103,13 @@ class CommonCLI(object):
                  obj_class: Type,
                  extra_arg_config: dict = {},
                  parser: ArgumentParser = ArgumentParser(
-                     formatter_class=ArgumentDefaultsHelpFormatter)
+                     formatter_class=ArgumentDefaultsHelpFormatter),
+                 args: Optional[List[Any]] = None
                  ):
         self._obj = None
         self._obj_class = obj_class
         self._parser = parser
+        self._unparsed_args = args
 
         def get_aliases(name): return extra_arg_config.get(
             name, {}).get("aliases", [])
@@ -137,16 +135,14 @@ class CommonCLI(object):
                     extra["help"] = f.name
                 self._parser.add_argument(f"--{f.name}", type=f.type, *aliases, **extra)
 
-        self._parser.add_argument(
-            "--port", type=int, help="Port to use for rendering", default=3939)
         self.add_output_argument()
     
     def add_output_argument(self):
         self._parser.add_argument(
-            "-o", "--output", help="Output file to write to, if omitted, will just render instead")
+            "-o", "--output", help="Output file to write to, if omitted, output will be disabled")
 
     def parse_args(self):
-        self._args = self._parser.parse_args()
+        self._args = self._parser.parse_args(self._unparsed_args)
         return self._args
 
     def make(self):
@@ -155,10 +151,6 @@ class CommonCLI(object):
                 self._obj_class) if f.name in self._args}
             self._obj = self._obj_class(**init_args)
         return self._obj
-
-    def render(self):
-        set_port(self._args.port)
-        show(self.make())
 
     def save_output(self):
         raise NotImplemented
@@ -171,8 +163,6 @@ class CommonCLI(object):
         self.parse_args()
         if self.output_is_set:
             self.save_output()
-        else:
-            self.render()
 
 @dataclass(kw_only=True)
 class CommonPart(BasePartObject):
@@ -251,7 +241,7 @@ class CommonAssemblyCLI(CommonCLI):
     def add_output_argument(self):
         self._parser.add_argument(
             "-o", "--output_prefix",
-            help="Prefix of file names of output, if omitted, will just render instead")
+            help="Output file to write to, if omitted, output will be disabled")
         self._parser.add_argument(
             "-t", "--output_types",
             choices=["stl", "step", "combined_step"],
