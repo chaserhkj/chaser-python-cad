@@ -151,6 +151,16 @@ class CommonCLI(object):
                 self._obj_class) if f.name in self._args}
             self._obj = self._obj_class(**init_args)
         return self._obj
+    
+    def remake_with_args(self, args):
+        self.clear_cached()
+
+        self.parse_args(args)
+        return self.make()
+
+    # Clear cached object to force remake
+    def clear_cached(self):
+        self._obj = None
 
     def save_output(self):
         raise NotImplemented
@@ -160,10 +170,12 @@ class CommonCLI(object):
         return not self._args.output is None
 
     def main(self):
+        self.clear_cached()
+
         self.parse_args(sys.argv)
         if self.output_is_set:
             self.save_output()
-
+    
 @dataclass(kw_only=True)
 class CommonPart(BasePartObject):
     rotation: RotationLike = (0, 0, 0)
@@ -241,7 +253,7 @@ class CommonAssemblyCLI(CommonCLI):
     def add_output_argument(self):
         self._parser.add_argument(
             "-o", "--output_prefix",
-            help="Output file to write to, if omitted, output will be disabled")
+            help="Output filename prefixes to write to, if omitted, output will be disabled")
         self._parser.add_argument(
             "-t", "--output_types",
             choices=["stl", "step", "combined_step"],
