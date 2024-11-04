@@ -8,7 +8,7 @@ from typing import (
     Union, List, Optional, Type, Callable, Tuple, Dict, Any)
 from enum import Enum
 from copy import copy
-import os
+import os, sys
 import math
 import colorsys
 
@@ -104,7 +104,7 @@ class CommonCLI(object):
                  extra_arg_config: dict = {},
                  parser: ArgumentParser = ArgumentParser(
                      formatter_class=ArgumentDefaultsHelpFormatter),
-                 args: Optional[List[Any]] = None
+                 args: List[Any] = []
                  ):
         self._obj = None
         self._obj_class = obj_class
@@ -141,8 +141,8 @@ class CommonCLI(object):
         self._parser.add_argument(
             "-o", "--output", help="Output file to write to, if omitted, output will be disabled")
 
-    def parse_args(self):
-        self._args = self._parser.parse_args(self._unparsed_args)
+    def parse_args(self, extra_args: Optional[List[Any]] = None):
+        self._args = self._parser.parse_args(self._unparsed_args + extra_args)
         return self._args
 
     def make(self):
@@ -160,7 +160,7 @@ class CommonCLI(object):
         return not self._args.output is None
 
     def main(self):
-        self.parse_args()
+        self.parse_args(sys.argv)
         if self.output_is_set:
             self.save_output()
 
