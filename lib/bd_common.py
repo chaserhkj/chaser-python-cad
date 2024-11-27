@@ -197,8 +197,14 @@ class CommonPart(BasePartObject):
 
     def make(self):
         raise NotImplementedError
+    
+    def init_params(self):
+        '''Override this method in subclasses to initialize
+        all indirect parameters'''
+        return
 
     def __post_init__(self):
+        self.init_params()
         if not self.main_part:
             self.main_part = self.make()
         super().__init__(self.main_part, rotation=self.rotation,
@@ -229,7 +235,13 @@ class CommonSketch(BaseSketchObject):
     def make(self):
         raise NotImplementedError
 
+    def init_params(self):
+        '''Override this method in subclasses to initialize
+        all indirect parameters'''
+        return
+
     def __post_init__(self):
+        self.init_params()
         if not self.main_sketch:
             self.main_sketch = self.make()
         super().__init__(self.main_sketch, rotation=self.rotation,
@@ -254,7 +266,13 @@ class CommonAssembly(Compound):
     def make(self):
         raise NotImplementedError
     
+    def init_params(self):
+        '''Override this method in subclasses to initialize
+        all indirect parameters'''
+        return
+
     def __post_init__(self):
+        self.init_params()
         if not self.children_specs:
             self.children_specs = self.make()
         stripped_children = [t[0] for t in self.children_specs]
