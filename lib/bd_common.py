@@ -98,13 +98,22 @@ def connect_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
 def connect_relatively_to(shape, target, from_vec, to_vec, keep_lcs: bool = True):
     return target.location*anchor_to(shape, bound_loc(target.located(Pos()), to_vec), from_vec, keep_lcs)
 
+def _get_field_default(f):
+    if not isinstance(f.default, _MISSING_TYPE):
+        return f.default
+    if not isinstance(f.default_factory, _MISSING_TYPE):
+        return f.default_factory()
+    raise Exception(f"No default and no default_factory for field {f.name}")
+
 class CommonCLI(object):
     def __init__(self,
                  obj_class: Type,
                  extra_arg_config: dict = {},
                  parser: ArgumentParser = ArgumentParser(
-                     formatter_class=ArgumentDefaultsHelpFormatter),
-                 args: List[Any] = []
+                     formatter_class=ArgumentDefaultsHelpFormatter,
+                     conflict_handler='resolve'),
+                 args: List[Any] = [],
+                 override_conflict_args: bool = False,
                  ):
         self._obj = None
         self._obj_class = obj_class
@@ -118,6 +127,8 @@ class CommonCLI(object):
             k: extra_arg_config[k] for k in extra_arg_config.get(name, {}) if k != "aliases"}
 
         for f in fields(self._obj_class):
+            if f.metadata.get("no_CLI"):
+                continue
             aliases = get_aliases(f.name)
             extra = copy(get_extra(f.name))
             if isinstance(f.default, _MISSING_TYPE) and \
@@ -125,12 +136,7 @@ class CommonCLI(object):
                 self._parser.add_argument(f.name, type=f.type, *aliases, **extra)
             else:
                 if not "default" in extra:
-                    if not isinstance(f.default, _MISSING_TYPE):
-                        extra["default"] = f.default
-                    elif not isinstance(f.default_factory, _MISSING_TYPE):
-                        extra["default"] = f.default_factory()
-                    else:
-                        raise Exception("No default and no default_factory")
+                    extra["default"] = _get_field_default(f)
                 if not "help" in extra:
                     extra["help"] = f.name
                 self._parser.add_argument(f"--{f.name}", type=f.type, *aliases, **extra)
@@ -144,12 +150,18 @@ class CommonCLI(object):
     def parse_args(self, extra_args: Optional[List[Any]] = None):
         self._args = self._parser.parse_args(self._unparsed_args + extra_args)
         return self._args
+    
+    def _get_init_args(self):
+        init_args = {f.name: getattr(self._args, (f.name)) for f in fields(
+            self._obj_class) if f.name in self._args}
+        init_non_args = {f.name: _get_field_default(f) for f in fields(
+            self._obj_class) if not f.name in self._args}
+        init_args.update(init_non_args)
+        return init_args
 
     def make(self):
         if self._obj is None:
-            init_args = {f.name: getattr(self._args, (f.name)) for f in fields(
-                self._obj_class) if f.name in self._args}
-            self._obj = self._obj_class(**init_args)
+            self._obj = self._obj_class(**self._get_init_args())
         return self._obj
     
     def remake_with_args(self, args):
@@ -172,7 +184,7 @@ class CommonCLI(object):
     def main(self):
         self.clear_cached()
 
-        self.parse_args(sys.argv)
+        self.parse_args(sys.argv[1:])
         if self.output_is_set:
             self.save_output()
     
@@ -233,11 +245,11 @@ class CommonSketch(BaseSketchObject):
 class CommonAssembly(Compound):
     # List of (children, <individual_save_name> or
     #           <None for not saving individually>)
-    children_specs: List[Tuple[Shape, Optional[str]]] = field(default_factory=list)
-    compound_args: Dict[str, Any] = field(default_factory=dict)
+    children_specs: List[Tuple[Shape, Optional[str]]] = field(default_factory=list, metadata={"no_CLI": True})
+    compound_args: Dict[str, Any] = field(default_factory=dict, metadata={"no_CLI": True})
     # Custom save function to be called when saving
     # custom_save_func(compound_to_save, save_path_prefix)
-    custom_save_func: Optional[Callable[[Compound, str], None]] = None
+    custom_save_func: Optional[Callable[[Compound, str], None]] = field(default=None, metadata={"no_CLI": True})
 
     def make(self):
         raise NotImplementedError
