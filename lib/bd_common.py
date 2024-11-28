@@ -105,6 +105,17 @@ def _get_field_default(f):
         return f.default_factory()
     raise Exception(f"No default and no default_factory for field {f.name}")
 
+def init_dataclass_from(data_class, obj, param_name_remap={}, *args, **kwargs):
+    '''Initialize dataclass from an exiting dataclass object
+    With remaps and overriding arguments as well'''
+    fields_set = set(f.name for f in fields(data_class))
+    param_dict = dict((param_name_remap.get(k, k), getattr(obj, k)) for k in dir(obj)
+                if k in fields_set
+                )
+    param_dict.update(dict((param_name_remap[k], getattr(obj, k)) for k in param_name_remap))
+    param_dict.update(kwargs)
+    return data_class(*args, **param_dict)
+
 class CommonCLI(object):
     def __init__(self,
                  obj_class: Type,
