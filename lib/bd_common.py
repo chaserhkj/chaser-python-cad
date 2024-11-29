@@ -36,7 +36,9 @@ def set_line_width(w):
     _line_width = w
 
 
-CENTER = Vector(0, 0, 0)
+# Origin
+O = Vector(0, 0, 0)
+CENTER = O
 BACK = Vector(0, 1, 0)
 FWD = Vector(0, -1, 0)
 FRONT = FWD
