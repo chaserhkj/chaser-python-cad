@@ -211,7 +211,7 @@ class CommonPart(BasePartObject):
     mode: Mode = Mode.SUBTRACT
     main_part: Optional[Part] = None
 
-    def make(self):
+    def make(self) -> Part:
         raise NotImplementedError
     
     def init_params(self):
@@ -221,10 +221,13 @@ class CommonPart(BasePartObject):
 
     def __post_init__(self):
         self.init_params()
-        if not self.main_part:
-            self.main_part = self.make()
+        self._make()
         super().__init__(self.main_part, rotation=self.rotation,
                          align=self.align, mode=self.mode)
+    
+    def _make(self):
+        if not self.main_part:
+            self.main_part = self.make()
 
     def wrap(self, wrapped: Part):
         param = dict((f.name, getattr(self, f.name))
@@ -232,6 +235,22 @@ class CommonPart(BasePartObject):
         param["main_part"] = wrapped
         new = self.__class__(**param)
         return new
+
+class CommonJoinedPart(CommonPart):
+    '''A Part that is defined by joining multiple subparts.
+    Each subpart will define a positive and a negative component
+    The final part is built by union of positives minus union of negatives'''
+    positive_parts: List[Part] = field(default_factory=list, metadata={"no_CLI": True})
+    negative_parts: List[Part] = field(default_factory=list, metadata={"no_CLI": True})
+    
+    def make(self) -> Tuple[List[Part], List[Part]]:
+        raise NotImplementedError
+
+    def _make(self):
+        if not self.positive_parts and not self.negative_parts:
+            self.positive_parts, self.negative_parts = self.make()
+        if not self.main_part:
+            self.main_part = Part() + self.positive_parts - self.negative_parts
 
 class CommonPartCLI(CommonCLI):
     def save_output(self):
@@ -258,10 +277,13 @@ class CommonSketch(BaseSketchObject):
 
     def __post_init__(self):
         self.init_params()
-        if not self.main_sketch:
-            self.main_sketch = self.make()
+        self._make()
         super().__init__(self.main_sketch, rotation=self.rotation,
                          align=self.align, mode=self.mode)
+
+    def _make(self):
+        if not self.main_sketch:
+            self.main_sketch = self.make()
 
     def wrap(self, wrapped: Sketch):
         param = dict(getattr(self, f.name) for f in fields(self.__class__))
@@ -289,10 +311,14 @@ class CommonAssembly(Compound):
 
     def __post_init__(self):
         self.init_params()
-        if not self.children_specs:
-            self.children_specs = self.make()
+        self._make()
         stripped_children = [t[0] for t in self.children_specs]
         super().__init__(stripped_children, **self.compound_args)
+    
+    def _make(self):
+        if not self.children_specs:
+            self.children_specs = self.make()
+
 
 
 class CommonAssemblyCLI(CommonCLI):
