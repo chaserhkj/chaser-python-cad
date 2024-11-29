@@ -236,6 +236,7 @@ class CommonPart(BasePartObject):
         new = self.__class__(**param)
         return new
 
+@dataclass(kw_only=True)
 class CommonJoinedPart(CommonPart):
     '''A Part that is defined by joining multiple subparts.
     Each subpart will define a positive and a negative component
@@ -251,6 +252,10 @@ class CommonJoinedPart(CommonPart):
             self.positive_parts, self.negative_parts = self.make()
         if not self.main_part:
             self.main_part = Part() + self.positive_parts - self.negative_parts
+            self.post_process()
+    
+    def post_process(self):
+        '''Post processing after joining, override in subclasses'''
 
 class CommonPartCLI(CommonCLI):
     def save_output(self):
