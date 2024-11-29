@@ -116,6 +116,11 @@ def init_dataclass_from(data_class, obj, param_name_remap={}, *args, **kwargs):
     param_dict.update(kwargs)
     return data_class(*args, **param_dict)
 
+def rdeq(op1, op2, ndigits=3):
+    '''Helper for doing rounded equal checks'''
+    return round(op1, ndigits) == round(op2, ndigits)
+
+
 class CommonCLI(object):
     def __init__(self,
                  obj_class: Type,
