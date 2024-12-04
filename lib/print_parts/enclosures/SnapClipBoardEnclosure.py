@@ -72,6 +72,10 @@ class _UnAssembled(SnapClipBoardStandoff):
             lid_back_snaps = (
                 lid_back_attach_plane * self.snap
             )
+            if self.fillet > 0:
+                lid_face = lid.faces().filter_by(Axis.Z).sort_by(Axis.Z)[-1]
+                lid_edges = lid.edges().group_by(Axis.Z)[-1]
+                lid = fillet(lid_edges, self.fillet)
             lid += [lid_wedge, lid_left_snaps, lid_right_snaps, lid_front_snaps, lid_back_snaps]
             lid = Pos(Z=5)*connect_to(lid, main_w_snaps, BOT, TOP)
             self.base = main_w_snaps

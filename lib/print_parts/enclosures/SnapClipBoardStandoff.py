@@ -20,6 +20,7 @@ class SnapClipBoardStandoff(CommonPart):
     snap_length: float = 10
     snap_depth: float = 1
     snap_tolerance: float = 0
+    fillet: float = 0.6
     def init_params(self):
         self.adjusted_inner_w = self.inner_w + 2*self.board_tolerance
         self.adjusted_inner_l = self.inner_l + 2*self.board_tolerance
@@ -55,6 +56,9 @@ class SnapClipBoardStandoff(CommonPart):
         right_snap = right_attach_plane * self.snap
         right_snap = connect_to(right_snap, right_attach_face, RIGHT+BOT, BOT)
         right_snap = Pos(Z=self.board_thickness)*right_snap
+        if self.fillet > 0:
+            main_edges = main.edges().group_by(Axis.Z)[0]
+            main = fillet(main_edges, self.fillet)
         main_w_snaps = main + [left_snap, right_snap]
 
         self.__components = locals()
