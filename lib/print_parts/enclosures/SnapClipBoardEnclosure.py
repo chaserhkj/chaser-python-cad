@@ -80,8 +80,8 @@ class _UnAssembled(SnapClipBoardStandoff):
         return make_next_step(**last_components)
 
 def _make(self):
-    parts = init_dataclass_from(_UnAssembled, self)
-    return [(parts.base, "base"), (parts.lid, "lid")]
+    self.parts = init_dataclass_from(_UnAssembled, self)
+    return [(self.parts.base, "base"), (self.parts.lid, "lid")]
 
 SnapClipBoardEnclosure = make_dataclass(
     "SnapClipBoardEnclosure", [

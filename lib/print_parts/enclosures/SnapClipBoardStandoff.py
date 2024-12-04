@@ -12,8 +12,8 @@ class SnapClipBoardStandoff(CommonPart):
     shell_thickness: float = 2
     inner_w: float = 50
     inner_l: float = 50
-    board_tolerance: float = 0.1
-    board_thickness: float = 1
+    board_tolerance: float = 0.2
+    board_thickness: float = 1.6
     bot_clearance: float = 3
     # Bottom standoff pattern, sketch or float number as inset amount
     bot_standoff_pattern: Union[float, Sketch] = 2.0
@@ -33,7 +33,7 @@ class SnapClipBoardStandoff(CommonPart):
         assert self.adjusted_inner_l > self.snap.full_length * 4, "snap_length is too big!"
 
     def make(self):
-        inner_base_sk = Rectangle(self.adjusted_inner_w, self.adjusted_inner_w)
+        inner_base_sk = Rectangle(self.adjusted_inner_w, self.adjusted_inner_l)
         base_sk = offset(inner_base_sk, self.shell_thickness)
         walls_sk = base_sk - inner_base_sk
         base = extrude(base_sk, self.shell_thickness)

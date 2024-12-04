@@ -1,1 +1,1 @@
-from BoardSnapClip import BoardSnapClip
+from .BoardSnapClip import BoardSnapClip
