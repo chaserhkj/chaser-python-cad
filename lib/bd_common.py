@@ -360,7 +360,7 @@ class CommonAssemblyCLI(CommonCLI):
             for (obj, name) in self.make().children_specs:
                 if name is None:
                     continue
-                export_func(self.make(),
+                export_func(obj,
                     f"{self._args.output_prefix}_{name}.{out_type}")
 
 class NutTrapType(Enum):
