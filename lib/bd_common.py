@@ -166,8 +166,8 @@ class CommonCLI(object):
             "-o", "--output", help="Output file to write to, if omitted, output will be disabled")
 
     def parse_args(self, extra_args: Optional[List[Any]] = None):
-        self._args = self._parser.parse_args(self._unparsed_args + extra_args)
-        return self._args
+        _args = self._parser.parse_args(self._unparsed_args + extra_args)
+        return _args
     
     def _get_init_args(self):
         init_args = {f.name: getattr(self._args, (f.name)) for f in fields(
@@ -183,9 +183,12 @@ class CommonCLI(object):
         return self._obj
     
     def remake_with_args(self, args):
-        self.clear_cached()
+        _args = self.parse_args(args)
+        if hasattr(self, "_args") and _args == self._args:
+            return self.make()
+        self._args = _args
 
-        self.parse_args(args)
+        self.clear_cached()
         return self.make()
 
     # Clear cached object to force remake
@@ -202,7 +205,7 @@ class CommonCLI(object):
     def main(self):
         self.clear_cached()
 
-        self.parse_args(sys.argv[1:])
+        self._args = self.parse_args(sys.argv[1:])
         if self.output_is_set:
             self.save_output()
     
@@ -345,6 +348,18 @@ class CommonAssemblyCLI(CommonCLI):
     @property
     def output_is_set(self):
         return not self._args.output_prefix is None
+
+    def remake_children_with_args(self, args):
+        _args = self.parse_args(args)
+        if hasattr(self, "_args") and _args == self._args:
+            self.make()
+            return dict((k, v) for v, k in self._obj.children_specs)
+        self._args = _args
+
+        self.clear_cached()
+        self.make()
+        return dict((k, v) for v, k in self._obj.children_specs)
+
     def save_output(self):
         out_type = self._args.output_types
         if not self._args.no_custom_saves:
