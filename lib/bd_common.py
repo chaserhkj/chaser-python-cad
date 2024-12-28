@@ -322,8 +322,10 @@ class CommonAssembly(Compound):
     def __post_init__(self):
         self.init_params()
         self._make()
-        stripped_children = [t[0] for t in self.children_specs]
-        super().__init__(stripped_children, **self.compound_args)
+        children = [(copy(m), n) for m, n in self.children_specs]
+        for m, n in children:
+            m.label = n
+        super().__init__(children, **self.compound_args)
     
     def _make(self):
         if not self.children_specs:
