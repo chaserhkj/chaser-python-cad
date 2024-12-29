@@ -326,7 +326,7 @@ class CommonAssembly(Compound):
         for m, n in children:
             m.label = n
         children = [m for m, n in children]
-        super().__init__(children, **self.compound_args)
+        super().__init__(children=children, **self.compound_args)
     
     def _make(self):
         if not self.children_specs:
